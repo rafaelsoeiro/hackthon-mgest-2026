@@ -1,40 +1,66 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Put } from '@nestjs/common';
 import { JiraService } from './jira.service';
-import { CreateJiraDto } from './dto/create-jira.dto';
-import { UpdateJiraDto } from './dto/update-jira.dto';
+import { CreateJiraBulkDto, CreateJiraDto } from './dto/create-jira.dto';
+import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 
 @Controller('jira')
 export class JiraController {
   constructor(private readonly jiraService: JiraService) {}
-
-  @Post()
-  create(@Body() createJiraDto: CreateJiraDto) {
-    return this.jiraService.create(createJiraDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.jiraService.findAll();
-  }
 
   @Get('myself')
   async atlassianMySelf() {
     return this.jiraService.atlassianMySelf();
   }
 
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.jiraService.findOne(+id);
+  @Post('issues')
+  async createIssue(@Body() createJiraDto: CreateJiraDto) {
+    return this.jiraService.createIssue(createJiraDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateJiraDto: UpdateJiraDto) {
-    return this.jiraService.update(+id, updateJiraDto);
+  @Post('issues/bulk')
+  async createIssuesBulk(@Body() input: CreateJiraBulkDto) {
+    return this.jiraService.createIssuesBulk(input);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.jiraService.remove(+id);
+  @Get('issues/:key')
+  async getIssue(@Param('key') key: string) {
+    return this.jiraService.getIssue(key);
+  }
+
+  @Get('issues')
+  async searchIssues(
+    @Query('jql') jql: string,
+    @Query('startAt') startAt?: string,
+    @Query('maxResults') maxResults?: string,
+  ) {
+    return this.jiraService.searchIssues(jql, {
+      startAt: startAt ? Number(startAt) : undefined,
+      maxResults: maxResults ? Number(maxResults) : undefined,
+    });
+  }
+
+  @Post('projects')
+  async createProject(@Body() input: CreateProjectDto) {
+    return this.jiraService.createProject(input);
+  }
+
+  @Get('projects')
+  async getAllProjects() {
+    return this.jiraService.getAllProjects();
+  }
+
+  @Get('projects/:key')
+  async getProject(@Param('key') key: string) {
+    return this.jiraService.getProject(key);
+  }
+
+  @Put('projects/:key')
+  async updateProject(@Param('key') key: string, @Body() input: UpdateProjectDto) {
+    return this.jiraService.updateProject(key, input);
+  }
+
+  @Delete('projects/:key')
+  async deleteProject(@Param('key') key: string) {
+    return this.jiraService.deleteProject(key);
   }
 }
