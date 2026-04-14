@@ -13,6 +13,8 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { FeedbacksModule } from './feedbacks/feedbacks.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { PriorityScoreModule } from './priority-score/priority-score.module';
+import { AIModule } from './ai/ai.module';
+import { ProcessingModule } from './processing/processing.module';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { PriorityScoreModule } from './priority-score/priority-score.module';
     FeedbacksModule,
     IngestionModule,
     PriorityScoreModule,
+    AIModule,
+    ProcessingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
