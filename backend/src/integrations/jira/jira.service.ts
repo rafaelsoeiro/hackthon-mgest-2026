@@ -1,90 +1,50 @@
-import { HttpException, Injectable } from '@nestjs/common';
-import { CreateJiraDto } from './dto/create-jira.dto';
-import { UpdateJiraDto } from './dto/update-jira.dto';
+import { Injectable } from '@nestjs/common';
+import { JiraClient } from './jira.client';
+import { CreateJiraBulkDto, CreateJiraDto } from './dto/create-jira.dto';
+import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 
 @Injectable()
 export class JiraService {
+  constructor(private readonly jiraClient: JiraClient) {}
 
   async atlassianMySelf() {
-    if (!process.env.ATLASSIAN_BASE_URL) {
-      throw new HttpException(
-        {
-          code: 'CONFIGURACAO_INCOMPLETA',
-          message: 'ATLASSIAN_BASE_URL nao configurada.',
-        },
-        500,
-      );
-    }
-    if (!process.env.ATLASSIAN_EMAIL) {
-      throw new HttpException(
-        {
-          code: 'CONFIGURACAO_INCOMPLETA',
-          message: 'ATLASSIAN_EMAIL nao configurada.',
-        },
-        500,
-      );
-    }
-    if (!process.env.ATLASSIAN_API_TOKEN) {
-      throw new HttpException(
-        {
-          code: 'CONFIGURACAO_INCOMPLETA',
-          message: 'ATLASSIAN_API_TOKEN nao configurada.',
-        },
-        500,
-      );
-    }
-
-    const basicAuth = Buffer.from(
-      `${process.env.ATLASSIAN_EMAIL}:${process.env.ATLASSIAN_API_TOKEN}`,
-    ).toString('base64');
-
-    const response = await fetch(
-      `${process.env.ATLASSIAN_BASE_URL}/rest/api/3/myself`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          Accept: 'application/json',
-        },
-      },
-    );
-
-    if (!response.ok) {
-      const body = await response.text();
-      const details =
-        body?.trim() ||
-        `Falha na requisicao: ${response.status} ${response.statusText}`;
-      throw new HttpException(
-        {
-          code: 'JIRA_REQUISICAO_FALHOU',
-          status: response.status,
-          message: 'Falha ao comunicar com o Jira.',
-          detalhes: details,
-        },
-        response.status,
-      );
-    }
-
-    return response.json();
+    return this.jiraClient.getCurrentUser();
   }
 
-  create(createJiraDto: CreateJiraDto) {
-    return 'This action adds a new jira';
+  async createIssue(input: CreateJiraDto) {
+    return this.jiraClient.createIssue(input);
   }
 
-  findAll() {
-    return `This action returns all jira`;
+  async createIssuesBulk(input: CreateJiraBulkDto) {
+    return this.jiraClient.createIssuesBulk(input.projectKey, input.issues);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} jira`;
+  async searchIssues(jql: string, options?: { startAt?: number; maxResults?: number }) {
+    return this.jiraClient.searchIssues(jql, options);
   }
 
-  update(id: number, updateJiraDto: UpdateJiraDto) {
-    return `This action updates a #${id} jira`;
+  async getIssue(issueKey: string) {
+    return this.jiraClient.getIssue(issueKey);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} jira`;
+  async createProject(input: CreateProjectDto) {
+    return this.jiraClient.createProject(input);
   }
+
+  async getAllProjects() {
+    return this.jiraClient.getAllProjects();
+  }
+
+  async getProject(projectKey: string) {
+    return this.jiraClient.getProject(projectKey);
+  }
+
+  async updateProject(projectKey: string, data: UpdateProjectDto) {
+    return this.jiraClient.updateProject(projectKey, data);
+  }
+
+  async deleteProject(projectKey: string) {
+    return this.jiraClient.deleteProject(projectKey);
+  }
+
 }
