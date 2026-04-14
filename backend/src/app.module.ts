@@ -8,6 +8,9 @@ import { QueueModule } from './queue/queue.module';
 import { HealthModule } from './health/health.module';
 import { EvolutionModule } from './integrations/evolution/evolution.module';
 import { JiraModule } from './integrations/jira/jira.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { IncidentsModule } from './incidents/incidents.module';
+import { FeedbacksModule } from './feedbacks/feedbacks.module';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { JiraModule } from './integrations/jira/jira.module';
     HealthModule,
     EvolutionModule,
     JiraModule,
+    DashboardModule,
+    IncidentsModule,
+    FeedbacksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
