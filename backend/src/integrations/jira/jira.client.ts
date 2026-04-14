@@ -160,7 +160,11 @@ export class JiraClient {
       const { data } = await this.client.get<{ issues?: JiraIssue[] }>(
         '/search/jql',
         {
-          params: { jql, ...options },
+          params: {
+            jql,
+            ...options,
+            fields: 'summary,status,created,updated',
+          },
         },
       );
       const issues = data.issues ?? [];
