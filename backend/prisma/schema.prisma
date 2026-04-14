@@ -1,21 +1,208 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
 }
 
-// Placeholder model — será substituído pelos models reais do ICF
-model Feedback {
-  id        String   @id @default(uuid())
-  source    String   // "jira" | "whatsapp"
-  content   String
-  priority  Int      @default(0)
-  status    String   @default("pending")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+// ─── Enums ───────────────────────────────────────────────
 
-  @@map("feedbacks")
+enum FeedbackChannel {
+  JIRA
+  WHATSAPP
+}
+
+enum FeedbackType {
+  INCIDENT
+  IMPROVEMENT
+  DOUBT
+}
+
+enum PriorityLevel {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SystemCode {
+  GM_CORE
+  GM_SUITE
+  GM_FIN
+  GM_LOG
+  GM_INFRA
+  GM_OTHER
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  ROOT_CAUSE_IDENTIFIED
+  EPIC_CREATED
+}
+
+enum FeedbackProcessingStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model RawFeedback {
+  id               String                   @id @default(uuid())
+  channel          FeedbackChannel
+  externalId       String?
+  sourceGroupId    String?
+  sourceGroupName  String?
+  authorId         String?
+  authorName       String?
+  rawContent       String
+  attachments      Json?
+  receivedAt       DateTime
+  processingStatus FeedbackProcessingStatus @default(PENDING)
+  processingError  String?
+  createdAt        DateTime                 @default(now()) @map("created_at")
+
+  processedFeedback ProcessedFeedback?
+
+  @@index([channel, receivedAt])
+  @@index([processingStatus])
+  @@index([externalId])
+  @@map("raw_feedbacks")
+}
+
+model ProcessedFeedback {
+  id                 String        @id @default(uuid())
+  rawFeedbackId      String        @unique @map("raw_feedback_id")
+  systemCode         SystemCode
+  feedbackType       FeedbackType
+  severityScore      Float
+  aiSummary          String
+  keywordsFound      String[]
+  originalCategory   String?
+  reclassified       Boolean       @default(false)
+  scoreS             Float
+  scoreV             Float
+  scoreR             Float
+  scoreT             Float
+  scoreK             Float
+  priorityScore      Float
+  priorityLevel      PriorityLevel
+  overrideApplied    Boolean       @default(false)
+  overrideReason     String?
+  embedding          Unsupported("vector(384)")?
+  incidentGroupId    String?       @map("incident_group_id")
+  processedAt        DateTime
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  manualPriorityLevel PriorityLevel?
+  manualAdjustedBy   String?
+  manualAdjustedAt   DateTime?
+  manualAdjustReason String?
+
+  rawFeedback   RawFeedback    @relation(fields: [rawFeedbackId], references: [id])
+  incidentGroup IncidentGroup? @relation(fields: [incidentGroupId], references: [id])
+
+  @@index([systemCode, processedAt])
+  @@index([priorityLevel, priorityScore(sort: Desc)])
+  @@index([incidentGroupId])
+  @@map("processed_feedbacks")
+}
+
+model IncidentGroup {
+  id                 String         @id @default(uuid())
+  title              String
+  systemCode         SystemCode
+  feedbackType       FeedbackType
+  priorityScore      Float
+  priorityLevel      PriorityLevel
+  status             IncidentStatus @default(OPEN)
+  feedbackCount      Int            @default(1)
+  recurrenceCount    Int            @default(0)
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  resolvedAt         DateTime?
+  rootCauseSummary   String?
+  epicJiraKey        String?
+  centroidEmbedding  Unsupported("vector(384)")?
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  feedbacks   ProcessedFeedback[]
+  occurrences IncidentOccurrence[]
+
+  @@index([systemCode, priorityLevel])
+  @@index([status, lastSeenAt])
+  @@map("incident_groups")
+}
+
+model IncidentOccurrence {
+  id              String    @id @default(uuid())
+  incidentGroupId String    @map("incident_group_id")
+  occurredAt      DateTime
+  resolvedAt      DateTime?
+  scoreSnapshot   Float
+
+  incidentGroup IncidentGroup @relation(fields: [incidentGroupId], references: [id])
+
+  @@index([incidentGroupId, occurredAt])
+  @@map("incident_occurrences")
+}
+
+model TimeWindow {
+  id          String   @id @default(uuid())
+  name        String
+  startHour   Int
+  startMinute Int      @default(0)
+  endHour     Int
+  endMinute   Int      @default(0)
+  boost       Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("time_windows")
+}
+
+model KeywordRule {
+  id             String   @id @default(uuid())
+  pattern        String
+  scoreK         Int
+  forceOverride  Boolean  @default(false)
+  overrideMinPS  Int?
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("keyword_rules")
+}
+
+model JiraSyncLog {
+  id              String   @id @default(uuid())
+  syncedAt        DateTime
+  issuesFetched   Int
+  issuesCreated   Int
+  issuesFailed    Int
+  lastJiraUpdated DateTime?
+  errorDetails    Json?
+
+  @@map("jira_sync_logs")
+}
+
+model WhatsAppGroup {
+  id          String      @id @default(uuid())
+  groupId     String      @unique @map("group_id")
+  groupName   String
+  memberCount Int?
+  isMonitored Boolean     @default(true)
+  systemHint  SystemCode?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@map("whatsapp_groups")
 }
