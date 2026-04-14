@@ -11,6 +11,8 @@ import { JiraModule } from './integrations/jira/jira.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { FeedbacksModule } from './feedbacks/feedbacks.module';
+import { IngestionModule } from './ingestion/ingestion.module';
+import { PriorityScoreModule } from './priority-score/priority-score.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { FeedbacksModule } from './feedbacks/feedbacks.module';
     DashboardModule,
     IncidentsModule,
     FeedbacksModule,
+    IngestionModule,
+    PriorityScoreModule,
   ],
   controllers: [AppController],
   providers: [AppService],

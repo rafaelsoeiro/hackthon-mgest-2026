@@ -6,5 +6,6 @@ import { JiraController } from './jira.controller';
 @Module({
   controllers: [JiraController],
   providers: [JiraClient, JiraService],
+  exports: [JiraClient],
 })
 export class JiraModule {}

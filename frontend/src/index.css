@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-critical: 0 72.2% 50.6%;
+    --color-critical-light: 0 93.3% 94.1%;
+    --color-high: 24.6 95% 53.1%;
+    --color-high-light: 24.6 100% 95%;
+    --color-medium: 47.9 95.8% 53.1%;
+    --color-medium-light: 54.9 96.7% 88%;
+    --color-low: 142.1 76.2% 36.3%;
+    --color-low-light: 138.5 76.5% 96.7%;
+    --color-jira: 217.2 91.2% 59.8%;
+    --color-whatsapp: 142.1 76.2% 36.3%;
+    --color-primary-brand: 213 56% 24%;
+    --color-secondary-brand: 217.2 91.2% 59.8%;
+
+    --background: 222.2 47.4% 11.2%;
+    --foreground: 210 40% 96.5%;
+
+    --card: 217.2 32.6% 17.5%;
+    --card-foreground: 210 40% 96.5%;
+
+    --popover: 217.2 32.6% 17.5%;
+    --popover-foreground: 210 40% 96.5%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 210 40% 96.5%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 215 25% 27%;
+    --accent-foreground: 210 40% 96.5%;
+
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 217.2 91.2% 59.8%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 222.2 47.4% 8%;
+    --sidebar-foreground: 210 40% 96.5%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 25% 20%;
+    --sidebar-accent-foreground: 210 40% 96.5%;
+    --sidebar-border: 215 25% 20%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-mono-score {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@keyframes pulse-critical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-critical {
+  animation: pulse-critical 2s ease-in-out infinite;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(215 25% 27%);
+  border-radius: 3px;
+}
