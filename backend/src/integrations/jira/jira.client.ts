@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 type JiraIssue = {
   key?: string;
@@ -90,19 +91,19 @@ type JiraUser = {
 export class JiraClient {
   private readonly client: AxiosInstance;
 
-  constructor() {
-    const baseUrl = process.env.ATLASSIAN_BASE_URL;
-    const email = process.env.ATLASSIAN_EMAIL;
-    const token = process.env.ATLASSIAN_API_TOKEN;
+  constructor(private readonly configService: ConfigService) {
+    const baseUrl = this.configService.get<string>('JIRA_BASE_URL');
+    const email = this.configService.get<string>('JIRA_EMAIL');
+    const token = this.configService.get<string>('JIRA_API_TOKEN');
 
     if (!baseUrl) {
-      throw new Error('ATLASSIAN_BASE_URL nao configurada.');
+      throw new Error('JIRA_BASE_URL nao configurada.');
     }
     if (!email) {
-      throw new Error('ATLASSIAN_EMAIL nao configurada.');
+      throw new Error('JIRA_EMAIL nao configurada.');
     }
     if (!token) {
-      throw new Error('ATLASSIAN_API_TOKEN nao configurada.');
+      throw new Error('JIRA_API_TOKEN nao configurada.');
     }
 
     const basicAuth = Buffer.from(`${email}:${token}`).toString('base64');
