@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, Delete, Query, Put } from '@nestjs/common';
 import { JiraService } from './jira.service';
-import { CreateJiraBulkDto, CreateJiraDto } from './dto/create-jira.dto';
+import { ClearIssuesDto, CreateJiraBulkDto, CreateJiraDto } from './dto/create-jira.dto';
 import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 
 @Controller('jira')
@@ -20,6 +20,16 @@ export class JiraController {
   @Post('issues/bulk')
   async createIssuesBulk(@Body() input: CreateJiraBulkDto) {
     return this.jiraService.createIssuesBulk(input);
+  }
+
+  @Post('issues/clear')
+  async clearIssues(@Body() input: ClearIssuesDto) {
+    return this.jiraService.clearIssues(input);
+  }
+
+  @Delete('issues/cleanup')
+  async cleanupMockIssues(@Query('label') label?: string) {
+    return this.jiraService.cleanupMockIssues(label);
   }
 
   @Get('issues/:key')

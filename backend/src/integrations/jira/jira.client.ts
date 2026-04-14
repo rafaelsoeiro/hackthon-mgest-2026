@@ -174,12 +174,44 @@ export class JiraClient {
     }
   }
 
+  async searchIssueKeys(
+    jql: string,
+    options: SearchOptions = {},
+  ): Promise<string[]> {
+    try {
+      const { data } = await this.client.get<{ issues?: JiraIssue[] }>(
+        '/search/jql',
+        {
+          params: {
+            jql,
+            ...options,
+            fields: 'summary',
+          },
+        },
+      );
+      const issues = data.issues ?? [];
+      return issues
+        .map((issue) => issue.key)
+        .filter((key): key is string => Boolean(key));
+    } catch (error) {
+      this.handleError(error, 'searchIssueKeys');
+    }
+  }
+
   async getIssue(issueKey: string): Promise<SimplifiedIssue> {
     try {
       const { data } = await this.client.get<JiraIssue>(`/issue/${issueKey}`);
       return this.mapIssue(data);
     } catch (error) {
       this.handleError(error, 'getIssue');
+    }
+  }
+
+  async deleteIssue(issueKey: string): Promise<void> {
+    try {
+      await this.client.delete(`/issue/${issueKey}`);
+    } catch (error) {
+      this.handleError(error, 'deleteIssue');
     }
   }
 

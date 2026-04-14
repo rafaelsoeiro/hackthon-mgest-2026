@@ -15,3 +15,8 @@ export class CreateJiraBulkDto {
     description?: string;
   }[];
 }
+
+export class ClearIssuesDto {
+  projectKey?: string;
+  jql?: string;
+}
