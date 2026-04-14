@@ -17,6 +17,9 @@ lerna-debug.log*
 ## OS
 .DS_Store
 .codex
+agents.md
+jiracloud.3.postman
+postman/
 
 ## IDEs and editors
 .idea/
