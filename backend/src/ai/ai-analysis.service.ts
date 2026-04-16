@@ -13,9 +13,11 @@ import {
 export class AIAnalysisService {
   private readonly logger = new Logger(AIAnalysisService.name);
   private readonly client: Anthropic;
-  private readonly TIMEOUT_MS = 15_000;
+  private readonly TIMEOUT_MS = 8_000; // Reduced from 15s — fallback will handle slow calls
   private readonly MAX_CALLS_PER_MIN = 40;
   private callTimestamps: number[] = [];
+  private readonly analysisCache = new Map<string, { result: AIAnalysisResult; expiry: number }>();
+  private static readonly CACHE_TTL_MS = 5 * 60_000; // 5 min cache for identical content
 
   constructor(
     private readonly config: ConfigService,
@@ -27,12 +29,31 @@ export class AIAnalysisService {
   }
 
   async analyze(rawFeedback: RawFeedback): Promise<AIAnalysisResult> {
+    // Check cache first — identical content gets same classification
+    const cacheKey = rawFeedback.rawContent.trim().toLowerCase();
+    const cached = this.analysisCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      this.logger.debug(`Cache hit for feedback analysis`);
+      return cached.result;
+    }
+
     await this.throttle();
 
     const userPrompt = this.buildUserPrompt(rawFeedback);
 
     try {
       const result = await this.callClaude(userPrompt, 0);
+      this.analysisCache.set(cacheKey, {
+        result,
+        expiry: Date.now() + AIAnalysisService.CACHE_TTL_MS,
+      });
+      // Evict old entries periodically
+      if (this.analysisCache.size > 500) {
+        const now = Date.now();
+        for (const [k, v] of this.analysisCache) {
+          if (v.expiry < now) this.analysisCache.delete(k);
+        }
+      }
       return result;
     } catch (err) {
       this.logger.warn(

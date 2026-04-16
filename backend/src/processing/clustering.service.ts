@@ -198,33 +198,21 @@ export class ClusteringService {
     newEmbedding: number[],
   ): Promise<Record<string, never>> {
     try {
-      // Buscar embeddings existentes do grupo
-      const feedbacks = await this.prisma.$queryRawUnsafe<{ embedding: string }[]>(
-        `SELECT embedding::text
-         FROM processed_feedbacks
-         WHERE incident_group_id = $1
-           AND embedding IS NOT NULL`,
-        groupId,
-      );
-
-      const embeddings: number[][] = feedbacks
-        .map((f) => {
-          try {
-            return JSON.parse(f.embedding) as number[];
-          } catch {
-            return null;
-          }
-        })
-        .filter((e): e is number[] => e !== null);
-
-      embeddings.push(newEmbedding);
-
-      const centroid = this.embeddingService.updateCentroid(embeddings);
-      const vectorStr = `[${centroid.join(',')}]`;
-
+      // Incremental centroid update: new_centroid = (old_centroid * n + new_embedding) / (n + 1)
+      // This avoids fetching ALL embeddings from the group (O(n) → O(1))
       await this.prisma.$executeRawUnsafe(
-        `UPDATE incident_groups SET "centroidEmbedding" = $1::vector WHERE id = $2`,
-        vectorStr,
+        `UPDATE incident_groups
+         SET "centroidEmbedding" = (
+           CASE
+             WHEN "centroidEmbedding" IS NULL THEN $1::vector
+             ELSE (
+               ("centroidEmbedding" * "feedbackCount"::float + $1::vector) /
+               ("feedbackCount"::float + 1)
+             )
+           END
+         )
+         WHERE id = $2`,
+        `[${newEmbedding.join(',')}]`,
         groupId,
       );
     } catch (err) {

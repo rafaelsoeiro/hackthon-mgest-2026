@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -36,6 +37,11 @@ import { ProcessingModule } from './processing/processing.module';
       validationOptions: {
         abortEarly: false,
       },
+    }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 30_000, // 30s default TTL
+      max: 100,    // max 100 cached items
     }),
     PrismaModule,
     QueueModule,

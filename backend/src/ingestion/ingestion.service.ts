@@ -51,61 +51,72 @@ export class IngestionService {
     let skipped = 0;
     let failed = 0;
 
-    for (const issue of issues) {
+    // ─── Batch check: buscar todos os externalIds existentes de uma vez ──
+    const issueKeys = issues.map((i) => i.key);
+    const existingFeedbacks = await this.prisma.rawFeedback.findMany({
+      where: { externalId: { in: issueKeys }, channel: 'JIRA' },
+      select: { externalId: true },
+    });
+    const existingKeys = new Set(existingFeedbacks.map((f) => f.externalId));
+
+    // ─── Filtrar issues novas e classificar em memória (CPU-only) ──
+    const newIssues = issues.filter((issue) => {
+      if (existingKeys.has(issue.key)) {
+        skipped++;
+        return false;
+      }
+      return true;
+    });
+
+    // ─── Processar em batches de 20 usando transações ──
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < newIssues.length; i += BATCH_SIZE) {
+      const batch = newIssues.slice(i, i + BATCH_SIZE);
       try {
-        const existing = await this.prisma.rawFeedback.findFirst({
-          where: { externalId: issue.key, channel: 'JIRA' },
+        await this.prisma.$transaction(async (tx) => {
+          for (const issue of batch) {
+            const receivedAt = issue.createdAt ? new Date(issue.createdAt) : new Date();
+
+            const raw = await tx.rawFeedback.create({
+              data: {
+                channel: FeedbackChannel.JIRA,
+                externalId: issue.key,
+                sourceGroupName: `Jira — ${projectKey}`,
+                authorName: null,
+                rawContent: issue.summary,
+                receivedAt,
+                processingStatus: 'PROCESSED',
+              },
+            });
+
+            const classification = this.classify(issue.summary, receivedAt, timeWindows, keywordRules);
+
+            await tx.processedFeedback.create({
+              data: {
+                rawFeedbackId: raw.id,
+                systemCode: classification.systemCode,
+                feedbackType: classification.feedbackType,
+                severityScore: classification.severityScore,
+                aiSummary: classification.aiSummary,
+                keywordsFound: classification.keywordsFound,
+                reclassified: classification.reclassified,
+                scoreS: classification.scoreS,
+                scoreV: classification.scoreV,
+                scoreR: classification.scoreR,
+                scoreT: classification.scoreT,
+                scoreK: classification.scoreK,
+                priorityScore: classification.priorityScore,
+                priorityLevel: classification.priorityLevel,
+                processedAt: new Date(),
+              },
+            });
+
+            created++;
+          }
         });
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
-        const receivedAt = issue.createdAt ? new Date(issue.createdAt) : new Date();
-
-        const raw = await this.prisma.rawFeedback.create({
-          data: {
-            channel: FeedbackChannel.JIRA,
-            externalId: issue.key,
-            sourceGroupName: `Jira — ${projectKey}`,
-            authorName: null,
-            rawContent: issue.summary,
-            receivedAt,
-            processingStatus: 'PROCESSING',
-          },
-        });
-
-        const classification = this.classify(issue.summary, receivedAt, timeWindows, keywordRules);
-
-        await this.prisma.rawFeedback.update({
-          where: { id: raw.id },
-          data: { processingStatus: 'PROCESSED' },
-        });
-
-        await this.prisma.processedFeedback.create({
-          data: {
-            rawFeedbackId: raw.id,
-            systemCode: classification.systemCode,
-            feedbackType: classification.feedbackType,
-            severityScore: classification.severityScore,
-            aiSummary: classification.aiSummary,
-            keywordsFound: classification.keywordsFound,
-            reclassified: classification.reclassified,
-            scoreS: classification.scoreS,
-            scoreV: classification.scoreV,
-            scoreR: classification.scoreR,
-            scoreT: classification.scoreT,
-            scoreK: classification.scoreK,
-            priorityScore: classification.priorityScore,
-            priorityLevel: classification.priorityLevel,
-            processedAt: new Date(),
-          },
-        });
-
-        created++;
       } catch (err) {
-        this.logger.error(`Erro ao processar ${issue.key}: ${err}`);
-        failed++;
+        this.logger.error(`Erro ao processar batch [${i}..${i + batch.length}]: ${err}`);
+        failed += batch.length;
       }
     }
 
@@ -226,6 +237,8 @@ export class IngestionService {
 
     const ungrouped = await this.prisma.processedFeedback.findMany({
       where: { incidentGroupId: null },
+      take: 500, // Limit to avoid full table scan
+      orderBy: { processedAt: 'desc' },
       include: { rawFeedback: { select: { rawContent: true, receivedAt: true } } },
     });
 

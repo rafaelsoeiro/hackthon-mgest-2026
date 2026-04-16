@@ -5,10 +5,18 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
 export class HealthController {
+  private readonly redis: Redis;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    this.redis = new Redis(this.config.get<string>('REDIS_URL')!, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 3000,
+    });
+  }
 
   @Get()
   async check() {
@@ -33,12 +41,6 @@ export class HealthController {
   }
 
   private async checkRedis(): Promise<void> {
-    const redisUrl = this.config.get<string>('REDIS_URL')!;
-    const client = new Redis(redisUrl);
-    try {
-      await client.ping();
-    } finally {
-      client.disconnect();
-    }
+    await this.redis.ping();
   }
 }

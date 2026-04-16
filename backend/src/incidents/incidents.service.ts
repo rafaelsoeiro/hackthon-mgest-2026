@@ -42,6 +42,11 @@ export class IncidentsService {
           feedbacks: {
             select: {
               id: true,
+              scoreS: true,
+              scoreV: true,
+              scoreR: true,
+              scoreT: true,
+              scoreK: true,
               rawFeedback: { select: { channel: true } },
             },
           },
