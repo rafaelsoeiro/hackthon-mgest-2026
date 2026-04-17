@@ -83,32 +83,7 @@ export function AppHeader() {
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          <select
-            value={systemFilter}
-            onChange={e => setSystemFilter(e.target.value as SystemCode | 'ALL')}
-            className="bg-accent border border-border text-sm text-foreground rounded-md px-3 py-1.5 outline-none focus:ring-1 focus:ring-ring"
-          >
-            {systemOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={() => syncJira.mutate()}
-            disabled={syncJira.isPending}
-            className="flex items-center gap-2 bg-accent border border-border text-sm text-foreground px-3 py-1.5 rounded-md hover:bg-accent/80 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncJira.isPending ? 'animate-spin' : ''}`} />
-            {syncJira.isPending ? 'Sincronizando...' : 'Sync Jira'}
-          </button>
-
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-3 py-1.5 rounded-md hover:opacity-90 transition-opacity"
-          >
-            <FlaskConical className="w-4 h-4" />
-            Simular IA
-          </button>
+          {/* Botões removidos conforme solicitado */}
         </div>
       </header>
       {showModal && <AISimulationModal onClose={() => setShowModal(false)} />}
