@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Grid3X3, Server, Layers, AlertTriangle,
-  ChevronLeft, ChevronRight
+  LayoutDashboard, Grid3X3, Server, Layers, AlertTriangle, ListOrdered,
+  ChevronLeft, ChevronRight, Repeat2, Settings
 } from 'lucide-react';
 import { useOverview } from '@/hooks/use-api';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/queue', label: 'Fila', icon: ListOrdered },
   { path: '/heatmap', label: 'Heatmap', icon: Grid3X3 },
   { path: '/sistemas', label: 'Sistemas', icon: Server },
   { path: '/clusters', label: 'Clusters', icon: Layers },
   { path: '/problemas', label: 'Problemas', icon: AlertTriangle },
+  { path: '/incidents', label: 'Recorrências', icon: Repeat2 },
+  { path: '/settings', label: 'Configurações', icon: Settings },
 ];
 
 export function AppSidebar() {

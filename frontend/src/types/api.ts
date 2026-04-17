@@ -112,3 +112,140 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
 }
+
+// ─── Dashboard Metrics (GET /api/v1/dashboard/metrics) ─────
+
+export interface SystemHealthScore {
+  openIncidents: number;
+  avgPriorityScore: number;
+  healthScore: number;
+}
+
+export interface DashboardMetrics {
+  totalFeedbacks: number;
+  criticalIncidents: number;
+  highIncidents: number;
+  newIncidentGroups: number;
+  avgResolutionTimeMinutes: number;
+  systemHealthScore: Record<SystemCode, SystemHealthScore>;
+}
+
+// ─── Priority Queue (GET /api/v1/dashboard/priority-queue) ──
+
+export interface QueueIncident {
+  id: string;
+  title: string;
+  systemCode: SystemCode;
+  status: IncidentStatus;
+  priorityScore: number;
+  priorityLevel: PriorityLevel;
+  feedbackCount: number;
+  recurrenceCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  overrideApplied: boolean;
+  topKeywords: string[];
+  sources?: Source[];
+}
+
+export interface PriorityQueueResponse {
+  data: QueueIncident[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// ─── Incident Detail (GET /api/v1/incidents/:id) ────────────
+
+export interface IncidentOccurrence {
+  id: string;
+  occurredAt: string;
+  resolvedAt: string | null;
+  scoreSnapshot: number;
+}
+
+export interface IncidentDetail extends IncidentCluster {
+  feedbacks: Feedback[];
+  occurrences: IncidentOccurrence[];
+}
+
+// ─── Heatmap (GET /dashboard/heatmap) ───────────────────
+
+export interface HeatmapCell {
+  day: string;
+  dayOfWeek: number;
+  hour: number;
+  count: number;
+  averagePriorityScore: number;
+}
+
+// ─── Recurrences (GET /dashboard/recurrences) ───────────
+
+export interface RecurrenceIncident {
+  id: string;
+  title: string;
+  systemCode: SystemCode;
+  feedbackType: string;
+  priorityScore: number;
+  priorityLevel: PriorityLevel;
+  status: IncidentStatus;
+  feedbackCount: number;
+  recurrenceCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  resolvedAt: string | null;
+  epicJiraKey?: string | null;
+  occurrences: IncidentOccurrence[];
+}
+
+// ─── Config: TimeWindow ─────────────────────────────────
+
+export interface TimeWindow {
+  id: string;
+  name: string;
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+  boost: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ─── Config: KeywordRule ────────────────────────────────
+
+export interface KeywordRule {
+  id: string;
+  pattern: string;
+  scoreK: number;
+  forceOverride: boolean;
+  overrideMinPS: number | null;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ─── Config: WhatsAppGroup ──────────────────────────────
+
+export interface WhatsAppGroup {
+  id: string;
+  groupId: string;
+  groupName: string;
+  memberCount: number | null;
+  isMonitored: boolean;
+  systemHint: SystemCode | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Config: JiraSyncLog ────────────────────────────────
+
+export interface JiraSyncLog {
+  id: string;
+  syncedAt: string;
+  issuesFetched: number;
+  issuesCreated: number;
+  issuesFailed: number;
+  lastJiraUpdated: string | null;
+  errorDetails: unknown;
+}

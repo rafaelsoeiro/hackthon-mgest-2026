@@ -25,4 +25,34 @@ export class DashboardController {
   getHeatmap(@Query() query: PeriodDto) {
     return this.dashboardService.getHeatmap(query.period ?? '7d');
   }
+
+  @Get('priority-queue')
+  @CacheTTL(15_000)
+  getPriorityQueue(
+    @Query('systemCode') systemCode?: string,
+    @Query('priorityLevel') priorityLevel?: string,
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.dashboardService.getPriorityQueue({
+      systemCode,
+      priorityLevel,
+      status,
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+    });
+  }
+
+  @Get('metrics')
+  @CacheTTL(30_000)
+  getMetrics() {
+    return this.dashboardService.getMetrics();
+  }
+
+  @Get('recurrences')
+  @CacheTTL(60_000)
+  getRecurrences() {
+    return this.dashboardService.getRecurrences();
+  }
 }

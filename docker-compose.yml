@@ -1,23 +1,95 @@
 services:
+  # ── PostgreSQL 16 com pgvector ────────────────────────────
   postgres:
-    image: pgvector/pgvector:pg16
-    container_name: prisma-postgres
+    image: ankane/pgvector:16
+    container_name: icf-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: prisma
-      POSTGRES_PASSWORD: prisma123
-      POSTGRES_DB: prisma
+      POSTGRES_USER: ${POSTGRES_USER:-icf_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-icf_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-icf_db}
     ports:
-      - '5433:5432'
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-icf_user} -d $${POSTGRES_DB:-icf_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  # ── Redis 7 ───────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: prisma-redis
+    container_name: icf-redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Evolution API (WhatsApp) ──────────────────────────────
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    container_name: icf-evolution
+    restart: unless-stopped
+    ports:
+      - "${EVOLUTION_PORT:-8080}:8080"
+    environment:
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?Defina EVOLUTION_API_KEY no .env}
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── Backend (NestJS + Prisma) ─────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: icf-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-icf_user}:${POSTGRES_PASSWORD:-icf_pass}@postgres:5432/${POSTGRES_DB:-icf_db}?schema=public
+      REDIS_URL: redis://redis:6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JIRA_BASE_URL: ${JIRA_BASE_URL}
+      JIRA_EMAIL: ${JIRA_EMAIL}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN}
+      JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY:-PROJ}
+      EVOLUTION_API_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Frontend (React + Vite) ───────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+    container_name: icf-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
+  redisdata:
+  evolution_instances:

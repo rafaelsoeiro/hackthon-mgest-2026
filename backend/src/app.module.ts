@@ -16,6 +16,11 @@ import { IngestionModule } from './ingestion/ingestion.module';
 import { PriorityScoreModule } from './priority-score/priority-score.module';
 import { AIModule } from './ai/ai.module';
 import { ProcessingModule } from './processing/processing.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { JiraSyncModule } from './jira/jira-sync.module';
+import { WhatsAppGroupModule } from './whatsapp-group/whatsapp-group.module';
+import { ConfigRulesModule } from './config/config-rules.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -55,6 +60,11 @@ import { ProcessingModule } from './processing/processing.module';
     PriorityScoreModule,
     AIModule,
     ProcessingModule,
+    WhatsAppModule,
+    JiraSyncModule,
+    WhatsAppGroupModule,
+    ConfigRulesModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

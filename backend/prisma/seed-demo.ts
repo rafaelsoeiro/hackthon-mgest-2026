@@ -203,6 +203,312 @@ async function main() {
   });
   console.log('✔ JiraSyncLog registrado');
 
+  // ─── 5 Cenários de Demonstração Específicos ─────────
+  console.log('\n🎯 Criando 5 cenários de demonstração...');
+
+  // Cenário 1: Carga Noturna Falhou
+  const cenario1 = await prisma.incidentGroup.create({
+    data: {
+      title: 'Carga Noturna Falhou',
+      systemCode: SystemCode.GM_CORE,
+      feedbackType: FeedbackType.INCIDENT,
+      priorityScore: 85,
+      priorityLevel: PriorityLevel.CRITICAL,
+      status: IncidentStatus.OPEN,
+      feedbackCount: 5,
+      recurrenceCount: 4,
+      firstSeenAt: hoursAgo(336), // 14 days ago
+      lastSeenAt: hoursAgo(2),
+    },
+  });
+  // 5 feedbacks WHATSAPP
+  for (let i = 0; i < 5; i++) {
+    const receivedAt = hoursAgo(i * 24 + 2);
+    const raw = await prisma.rawFeedback.create({
+      data: {
+        channel: FeedbackChannel.WHATSAPP,
+        sourceGroupId: 'wa-ti-slz',
+        sourceGroupName: 'TI - Loja São Luís Centro',
+        authorName: pick(['João Silva', 'Maria Santos', 'Pedro Costa', 'Ana Oliveira', 'Carlos Lima']),
+        rawContent: pick([
+          'Carga noturna não rodou, estoque completamente desatualizado',
+          'Batch de processamento noturno falhou novamente, lojas sem dados',
+          'Sistema mostra estoque zerado por causa da carga que falhou',
+          'Urgente: carga noturna não completou, operação comprometida',
+          'Terceira vez esta semana que a carga noturna não roda',
+        ]),
+        receivedAt,
+        processingStatus: 'PROCESSED',
+      },
+    });
+    await prisma.processedFeedback.create({
+      data: {
+        rawFeedbackId: raw.id,
+        systemCode: SystemCode.GM_CORE,
+        feedbackType: FeedbackType.INCIDENT,
+        severityScore: 9,
+        aiSummary: 'Falha recorrente na carga noturna causando desatualização de estoque',
+        keywordsFound: ['carga noturna', 'estoque', 'falhou'],
+        reclassified: false,
+        scoreS: 9, scoreV: 8, scoreR: 7, scoreT: 6, scoreK: 9,
+        priorityScore: 85,
+        priorityLevel: PriorityLevel.CRITICAL,
+        overrideApplied: true,
+        overrideReason: 'Impacto direto em operação de vendas',
+        incidentGroupId: cenario1.id,
+        processedAt: new Date(receivedAt.getTime() + 30_000),
+      },
+    });
+  }
+  // 4 IncidentOccurrence históricas
+  for (let i = 0; i < 4; i++) {
+    await prisma.incidentOccurrence.create({
+      data: {
+        incidentGroupId: cenario1.id,
+        occurredAt: hoursAgo((4 - i) * 72),
+        resolvedAt: i < 3 ? hoursAgo((4 - i) * 72 - 12) : null,
+        scoreSnapshot: 85 + rand(-3, 3),
+      },
+    });
+  }
+  console.log('✔ Cenário 1: Carga Noturna Falhou');
+
+  // Cenário 2: Pedido Preso em Doca CD 87
+  const cenario2 = await prisma.incidentGroup.create({
+    data: {
+      title: 'Pedido Preso em Doca CD 87',
+      systemCode: SystemCode.GM_LOG,
+      feedbackType: FeedbackType.INCIDENT,
+      priorityScore: 92,
+      priorityLevel: PriorityLevel.CRITICAL,
+      status: IncidentStatus.OPEN,
+      feedbackCount: 9,
+      recurrenceCount: 2,
+      firstSeenAt: hoursAgo(168), // 7 days ago
+      lastSeenAt: hoursAgo(1),
+    },
+  });
+  // 8 feedbacks WHATSAPP + 1 JIRA
+  const c2Texts = [
+    'Pedido travado na doca 87, caminhão esperando há 4 horas',
+    'CD não libera pedido, sistema de WMS parou',
+    'Motorista na doca 87 sem previsão de liberação',
+    'Operação logística parada, doca 87 bloqueada',
+    'WMS não processa saída na doca 87',
+    'Gerente CD reporta doca 87 inoperante',
+    'Pedidos acumulando na doca 87 por falha no sistema',
+    'Sistema logístico travado, impacto em 12 entregas',
+  ];
+  for (let i = 0; i < 9; i++) {
+    const channel = i < 8 ? FeedbackChannel.WHATSAPP : FeedbackChannel.JIRA;
+    const receivedAt = hoursAgo(i * 8 + 1);
+    const raw = await prisma.rawFeedback.create({
+      data: {
+        channel,
+        externalId: channel === 'JIRA' ? 'GM-3001' : null,
+        sourceGroupId: channel === 'WHATSAPP' ? 'wa-cd-ma' : null,
+        sourceGroupName: channel === 'WHATSAPP' ? 'CD Maranhão - Operações' : 'Jira Service Desk',
+        authorName: pick(['Roberto Alves', 'Juliana Rocha', 'Carlos Lima', 'Maria Santos']),
+        rawContent: i < 8 ? c2Texts[i] : 'Bloqueio na doca 87 do CD — ticket escalado',
+        receivedAt,
+        processingStatus: 'PROCESSED',
+      },
+    });
+    await prisma.processedFeedback.create({
+      data: {
+        rawFeedbackId: raw.id,
+        systemCode: SystemCode.GM_LOG,
+        feedbackType: FeedbackType.INCIDENT,
+        severityScore: 9.5,
+        aiSummary: 'Pedido preso na doca 87 do CD por falha no WMS',
+        keywordsFound: ['doca 87', 'pedido preso', 'WMS'],
+        reclassified: false,
+        scoreS: 9.5, scoreV: 9, scoreR: 6, scoreT: 8, scoreK: 9,
+        priorityScore: 92,
+        priorityLevel: PriorityLevel.CRITICAL,
+        incidentGroupId: cenario2.id,
+        processedAt: new Date(receivedAt.getTime() + 30_000),
+      },
+    });
+  }
+  console.log('✔ Cenário 2: Pedido Preso em Doca CD 87');
+
+  // Cenário 3: Erro Tributação Faturamento
+  const cenario3 = await prisma.incidentGroup.create({
+    data: {
+      title: 'Erro Tributação Faturamento',
+      systemCode: SystemCode.GM_SUITE,
+      feedbackType: FeedbackType.INCIDENT,
+      priorityScore: 68,
+      priorityLevel: PriorityLevel.HIGH,
+      status: IncidentStatus.IN_PROGRESS,
+      feedbackCount: 6,
+      recurrenceCount: 3,
+      firstSeenAt: hoursAgo(240),
+      lastSeenAt: hoursAgo(4),
+    },
+  });
+  for (let i = 0; i < 6; i++) {
+    const receivedAt = hoursAgo(i * 40 + 4);
+    const raw = await prisma.rawFeedback.create({
+      data: {
+        channel: FeedbackChannel.WHATSAPP,
+        sourceGroupId: 'wa-fin-hq',
+        sourceGroupName: 'Financeiro - Matriz',
+        authorName: pick(['Ana Oliveira', 'João Silva', 'Pedro Costa']),
+        rawContent: pick([
+          'Tributação errada no faturamento, ICMS calculando errado',
+          'Erro de NCM no módulo fiscal',
+          'Nota saindo com alíquota errada',
+          'Faturamento com erro tributário, precisa corrigir urgente',
+          'Regime tributário não está sendo aplicado corretamente',
+          'CFOP errado nas notas de saída',
+        ]),
+        receivedAt,
+        processingStatus: 'PROCESSED',
+      },
+    });
+    await prisma.processedFeedback.create({
+      data: {
+        rawFeedbackId: raw.id,
+        systemCode: SystemCode.GM_SUITE,
+        feedbackType: FeedbackType.INCIDENT,
+        severityScore: 7,
+        aiSummary: 'Erro de tributação no módulo de faturamento',
+        keywordsFound: ['tributação', 'faturamento', 'ICMS'],
+        originalCategory: 'Outros',
+        reclassified: true,
+        scoreS: 7, scoreV: 6, scoreR: 5, scoreT: 5, scoreK: 7,
+        priorityScore: 68,
+        priorityLevel: PriorityLevel.HIGH,
+        incidentGroupId: cenario3.id,
+        processedAt: new Date(receivedAt.getTime() + 30_000),
+      },
+    });
+  }
+  console.log('✔ Cenário 3: Erro Tributação Faturamento (reclassified)');
+
+  // Cenário 4: Lentidão GM Suite
+  const cenario4 = await prisma.incidentGroup.create({
+    data: {
+      title: 'Lentidão GM Suite',
+      systemCode: SystemCode.GM_SUITE,
+      feedbackType: FeedbackType.INCIDENT,
+      priorityScore: 38,
+      priorityLevel: PriorityLevel.MEDIUM,
+      status: IncidentStatus.OPEN,
+      feedbackCount: 2,
+      recurrenceCount: 1,
+      firstSeenAt: hoursAgo(48),
+      lastSeenAt: hoursAgo(12),
+    },
+  });
+  for (let i = 0; i < 2; i++) {
+    const receivedAt = hoursAgo(i * 36 + 12);
+    const raw = await prisma.rawFeedback.create({
+      data: {
+        channel: FeedbackChannel.WHATSAPP,
+        sourceGroupId: 'wa-suite-erp',
+        sourceGroupName: 'Suite ERP - Suporte',
+        authorName: pick(['Juliana Rocha', 'Roberto Alves']),
+        rawContent: pick([
+          'GM Suite muito lento hoje, demora uns 3 minutos pra abrir cada tela',
+          'Lentidão no ERP está prejudicando o atendimento ao cliente',
+        ]),
+        receivedAt,
+        processingStatus: 'PROCESSED',
+      },
+    });
+    await prisma.processedFeedback.create({
+      data: {
+        rawFeedbackId: raw.id,
+        systemCode: SystemCode.GM_SUITE,
+        feedbackType: FeedbackType.INCIDENT,
+        severityScore: 4,
+        aiSummary: 'Lentidão generalizada no GM Suite',
+        keywordsFound: ['lentidão', 'GM Suite', 'lento'],
+        reclassified: false,
+        scoreS: 4, scoreV: 4, scoreR: 3, scoreT: 3, scoreK: 4,
+        priorityScore: 38,
+        priorityLevel: PriorityLevel.MEDIUM,
+        incidentGroupId: cenario4.id,
+        processedAt: new Date(receivedAt.getTime() + 30_000),
+      },
+    });
+  }
+  console.log('✔ Cenário 4: Lentidão GM Suite');
+
+  // Cenário 5: Melhoria de Tela Financeiro
+  const cenario5 = await prisma.incidentGroup.create({
+    data: {
+      title: 'Melhoria de Tela Financeiro',
+      systemCode: SystemCode.GM_FIN,
+      feedbackType: FeedbackType.IMPROVEMENT,
+      priorityScore: 8,
+      priorityLevel: PriorityLevel.LOW,
+      status: IncidentStatus.OPEN,
+      feedbackCount: 1,
+      recurrenceCount: 0,
+      firstSeenAt: hoursAgo(72),
+      lastSeenAt: hoursAgo(72),
+    },
+  });
+  {
+    const receivedAt = hoursAgo(72);
+    const raw = await prisma.rawFeedback.create({
+      data: {
+        channel: FeedbackChannel.WHATSAPP,
+        sourceGroupId: 'wa-fin-lojas',
+        sourceGroupName: 'Financeiro - Lojas',
+        authorName: 'Ana Oliveira',
+        rawContent: 'Seria bom se a tela de conciliação bancária tivesse filtro por data e banco, hoje só filtra por valor',
+        receivedAt,
+        processingStatus: 'PROCESSED',
+      },
+    });
+    await prisma.processedFeedback.create({
+      data: {
+        rawFeedbackId: raw.id,
+        systemCode: SystemCode.GM_FIN,
+        feedbackType: FeedbackType.IMPROVEMENT,
+        severityScore: 1,
+        aiSummary: 'Sugestão de melhoria na tela de conciliação bancária — filtros adicionais',
+        keywordsFound: ['melhoria', 'conciliação', 'filtro'],
+        reclassified: false,
+        scoreS: 1, scoreV: 1, scoreR: 0.5, scoreT: 0.5, scoreK: 1,
+        priorityScore: 8,
+        priorityLevel: PriorityLevel.LOW,
+        incidentGroupId: cenario5.id,
+        processedAt: new Date(receivedAt.getTime() + 30_000),
+      },
+    });
+  }
+  console.log('✔ Cenário 5: Melhoria de Tela Financeiro');
+
+  // ─── TimeWindows + KeywordRules seed ────────────────
+  console.log('\n⚙️ Criando configurações demo...');
+  await prisma.timeWindow.deleteMany();
+  await prisma.keywordRule.deleteMany();
+
+  await prisma.timeWindow.createMany({
+    data: [
+      { name: 'Carga Noturna', startHour: 0, startMinute: 0, endHour: 5, endMinute: 0, boost: 15, isActive: true },
+      { name: 'Abertura Lojas', startHour: 5, startMinute: 0, endHour: 8, endMinute: 0, boost: 10, isActive: true },
+      { name: 'Horário de Pico', startHour: 11, startMinute: 0, endHour: 14, endMinute: 0, boost: 8, isActive: true },
+    ],
+  });
+  console.log('✔ 3 TimeWindows');
+
+  await prisma.keywordRule.createMany({
+    data: [
+      { pattern: 'parado|travado|bloqueado', scoreK: 9, forceOverride: true, overrideMinPS: 70, description: 'Operação completamente parada', isActive: true },
+      { pattern: 'faturamento|nota fiscal|NF', scoreK: 8, forceOverride: false, description: 'Problemas fiscais / faturamento', isActive: true },
+      { pattern: 'lentidão|lento|demora', scoreK: 4, forceOverride: false, description: 'Performance degradada', isActive: true },
+      { pattern: 'melhoria|sugestão|seria bom', scoreK: 1, forceOverride: false, description: 'Feedbacks de melhoria', isActive: true },
+    ],
+  });
+  console.log('✔ 4 KeywordRules');
+
   console.log('\n🎉 Seed demo concluído!');
 }
 

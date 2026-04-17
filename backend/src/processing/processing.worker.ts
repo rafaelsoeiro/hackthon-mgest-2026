@@ -250,18 +250,36 @@ async function processFeedback(
       }
     }
 
-    // Step 8 — SSE (placeholder para EventsService da Etapa 12)
+    // Step 8 — Emit SSE events via EventEmitter2 → EventsService
     try {
-      events.emit('feedback_processed', {
-        rawFeedbackId,
+      events.emit('sse.ps_updated', {
         processedFeedbackId: processedFeedback.id,
-        incidentGroupId,
+        rawFeedbackId,
         systemCode: analysis.systemCode,
         priorityLevel: psResult.priorityLevel,
         priorityScore: psResult.priorityScore,
       });
+
+      if (incidentGroupId) {
+        events.emit('sse.new_incident', {
+          incidentGroupId,
+          processedFeedbackId: processedFeedback.id,
+          systemCode: analysis.systemCode,
+          priorityLevel: psResult.priorityLevel,
+          priorityScore: psResult.priorityScore,
+        });
+      }
+
+      if (psResult.overrideApplied) {
+        events.emit('sse.override_triggered', {
+          processedFeedbackId: processedFeedback.id,
+          overrideReason: psResult.overrideReason,
+          priorityScore: psResult.priorityScore,
+          priorityLevel: psResult.priorityLevel,
+        });
+      }
     } catch {
-      // EventsService placeholder — não bloqueia pipeline
+      // SSE emission failure should not block pipeline
     }
 
     // Marcar como PROCESSED

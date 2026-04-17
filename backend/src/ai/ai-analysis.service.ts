@@ -16,6 +16,7 @@ export class AIAnalysisService {
   private readonly TIMEOUT_MS = 8_000; // Reduced from 15s — fallback will handle slow calls
   private readonly MAX_CALLS_PER_MIN = 40;
   private callTimestamps: number[] = [];
+  private retryDelays = [5_000, 15_000, 60_000]; // Backoff for 429/5xx retries
   private readonly analysisCache = new Map<string, { result: AIAnalysisResult; expiry: number }>();
   private static readonly CACHE_TTL_MS = 5 * 60_000; // 5 min cache for identical content
 
@@ -42,7 +43,7 @@ export class AIAnalysisService {
     const userPrompt = this.buildUserPrompt(rawFeedback);
 
     try {
-      const result = await this.callClaude(userPrompt, 0);
+      const result = await this.callClaudeWithRetry(userPrompt);
       this.analysisCache.set(cacheKey, {
         result,
         expiry: Date.now() + AIAnalysisService.CACHE_TTL_MS,
@@ -110,6 +111,10 @@ export class AIAnalysisService {
         reclassified: validated.reclassificationReason !== null,
       };
     } catch (err) {
+      // Propagate retryable API errors (429/5xx) directly to callClaudeWithRetry
+      if (this.isRetryableError(err)) {
+        throw err;
+      }
       if (temperature === 0) {
         this.logger.warn('Primeira tentativa falhou, retentando com temperature=0.1');
         return this.callClaude(userPrompt, 0.1);
@@ -118,6 +123,39 @@ export class AIAnalysisService {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private async callClaudeWithRetry(userPrompt: string): Promise<AIAnalysisResult> {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= this.retryDelays.length; attempt++) {
+      try {
+        return await this.callClaude(userPrompt, 0);
+      } catch (err) {
+        lastError = err;
+
+        if (this.isRetryableError(err) && attempt < this.retryDelays.length) {
+          const delay = this.retryDelays[attempt];
+          this.logger.warn(
+            `Erro ${(err as any).status} da Claude API (tentativa ${attempt + 1}/${this.retryDelays.length + 1}), retry em ${delay / 1000}s`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        throw err;
+      }
+    }
+
+    throw lastError;
+  }
+
+  private isRetryableError(err: unknown): boolean {
+    if (err && typeof err === 'object' && 'status' in err) {
+      const status = (err as any).status;
+      return status === 429 || (status >= 500 && status < 600);
+    }
+    return false;
   }
 
   async fallbackAnalysis(rawFeedback: RawFeedback): Promise<AIAnalysisResult> {

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Radio, FlaskConical, Loader2, Zap, RefreshCw } from 'lucide-react';
+import { Radio, FlaskConical, Loader2, Zap, RefreshCw, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSSE } from '@/contexts/SSEContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { SystemCode } from '@/types/api';
@@ -31,6 +33,8 @@ const CRITICAL_KEYWORDS = ['caiu', 'parou', 'fora do ar', 'urgente', 'emergênci
 
 export function AppHeader() {
   const { systemFilter, setSystemFilter } = useFilters();
+  const { isConnected } = useSSE();
+  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const [countdown, setCountdown] = useState(30);
   const [showModal, setShowModal] = useState(false);
@@ -61,9 +65,23 @@ export function AppHeader() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}
+              title={isConnected ? 'SSE Online' : 'SSE Offline'}
+            />
+            <span className="text-xs">{isConnected ? '🟢 Online' : '🔴 Offline'}</span>
+            <span className="text-muted-foreground">·</span>
             <Radio className="w-3 h-3 text-low" />
-            <span>81 grupos WA + Jira · Atualizado há <span className="font-mono text-foreground">{countdown}s</span></span>
+            <span>Atualizado há <span className="font-mono text-foreground">{countdown}s</span></span>
           </div>
+
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-1.5 rounded-md bg-accent border border-border text-muted-foreground hover:text-foreground transition-colors"
+            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
 
           <select
             value={systemFilter}

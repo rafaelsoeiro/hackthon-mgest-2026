@@ -12,14 +12,21 @@ const defaultJobOptions = {
   removeOnFail: 1000,
 };
 
+function parseRedisUrl(url: string) {
+  const parsed = new URL(url);
+  return {
+    host: parsed.hostname || 'localhost',
+    port: parseInt(parsed.port, 10) || 6379,
+    ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+  };
+}
+
 @Module({
   imports: [
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        connection: {
-          url: config.get<string>('REDIS_URL'),
-        },
+        connection: parseRedisUrl(config.get<string>('REDIS_URL')!),
       }),
     }),
     BullModule.registerQueue(

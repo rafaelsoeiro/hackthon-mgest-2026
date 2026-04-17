@@ -1,10 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
-export class HealthController {
+export class HealthController implements OnModuleDestroy {
   private readonly redis: Redis;
 
   constructor(
@@ -16,6 +16,10 @@ export class HealthController {
       maxRetriesPerRequest: 1,
       connectTimeout: 3000,
     });
+  }
+
+  async onModuleDestroy() {
+    await this.redis.quit();
   }
 
   @Get()

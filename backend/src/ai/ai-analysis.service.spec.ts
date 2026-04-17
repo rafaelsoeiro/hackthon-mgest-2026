@@ -142,6 +142,68 @@ describe('AIAnalysisService', () => {
     expect(result.reclassificationReason).toBeTruthy();
   });
 
+  describe('retry with exponential backoff for 429/5xx', () => {
+    beforeEach(() => {
+      // Zero delays for fast tests
+      (service as any).retryDelays = [0, 0, 0];
+    });
+
+    it('should retry on 429 and succeed on third attempt', async () => {
+      const error429 = Object.assign(new Error('Rate limit exceeded'), { status: 429 });
+
+      mockCreate
+        .mockRejectedValueOnce(error429)
+        .mockRejectedValueOnce(error429)
+        .mockResolvedValueOnce({
+          content: [{ type: 'text', text: JSON.stringify(mockClaudeResponse) }],
+        });
+
+      const result = await service.analyze(mockRawFeedback);
+
+      expect(mockCreate).toHaveBeenCalledTimes(3);
+      expect(result.systemCode).toBe('GM_LOG');
+      expect(result.feedbackType).toBe('INCIDENT');
+    });
+
+    it('should retry on 5xx errors and succeed', async () => {
+      const error500 = Object.assign(new Error('Internal server error'), { status: 500 });
+
+      mockCreate
+        .mockRejectedValueOnce(error500)
+        .mockResolvedValueOnce({
+          content: [{ type: 'text', text: JSON.stringify(mockClaudeResponse) }],
+        });
+
+      const result = await service.analyze(mockRawFeedback);
+
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(result.systemCode).toBe('GM_LOG');
+    });
+
+    it('should fallback after exhausting all retry attempts on 429', async () => {
+      const error429 = Object.assign(new Error('Rate limit exceeded'), { status: 429 });
+      mockCreate.mockRejectedValue(error429);
+
+      const result = await service.analyze(mockRawFeedback);
+
+      // 1 initial + 3 retries = 4 total calls
+      expect(mockCreate).toHaveBeenCalledTimes(4);
+      expect(result.summary).toMatch(/^\[Fallback\]/);
+      expect(result.feedbackType).toBe('INCIDENT');
+    });
+
+    it('should not retry on non-retryable errors (e.g. 400)', async () => {
+      const error400 = Object.assign(new Error('Bad request'), { status: 400 });
+      mockCreate.mockRejectedValue(error400);
+
+      const result = await service.analyze(mockRawFeedback);
+
+      // temperature=0 fails → temperature=0.1 fails → fallback (no 429 retries)
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(result.summary).toMatch(/^\[Fallback\]/);
+    });
+  });
+
   describe('fallbackAnalysis', () => {
     it('should use systemHint from WhatsApp group', async () => {
       const result = await service.fallbackAnalysis(mockRawFeedback);

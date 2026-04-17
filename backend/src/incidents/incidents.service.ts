@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SystemCode, Prisma } from '@prisma/client';
+import { SystemCode, Prisma, IncidentStatus } from '@prisma/client';
+import { RecurrenceService } from '../processing/recurrence.service';
 
 @Injectable()
 export class IncidentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recurrenceService: RecurrenceService,
+  ) {}
 
   async findAll(filters: {
     system?: string;
@@ -175,6 +179,120 @@ export class IncidentsService {
     }
 
     return { success: true };
+  }
+
+  async updatePriority(
+    id: string,
+    body: { priorityLevel: string; reason: string },
+  ) {
+    if (!body.reason || body.reason.length < 10) {
+      throw new BadRequestException('reason must be at least 10 characters');
+    }
+
+    const ig = await this.prisma.incidentGroup.findUnique({
+      where: { id },
+      include: { feedbacks: { select: { id: true } } },
+    });
+    if (!ig) throw new NotFoundException(`Incident ${id} not found`);
+
+    // Update group priorityLevel but preserve AI priorityScore
+    await this.prisma.incidentGroup.update({
+      where: { id },
+      data: {
+        priorityLevel: body.priorityLevel as any,
+      },
+    });
+
+    // Mark all feedbacks with manual override
+    if (ig.feedbacks.length > 0) {
+      await this.prisma.processedFeedback.updateMany({
+        where: { incidentGroupId: id },
+        data: {
+          manualPriorityLevel: body.priorityLevel as any,
+          manualAdjustedAt: new Date(),
+          manualAdjustReason: body.reason,
+          overrideApplied: true,
+        },
+      });
+    }
+
+    return { success: true, priorityLevel: body.priorityLevel };
+  }
+
+  async updateStatus(id: string, body: { status: string }) {
+    const ig = await this.prisma.incidentGroup.findUnique({ where: { id } });
+    if (!ig) throw new NotFoundException(`Incident ${id} not found`);
+
+    const data: any = { status: body.status as IncidentStatus };
+
+    if (body.status === 'RESOLVED') {
+      data.resolvedAt = new Date();
+      // Register occurrence for recurrence tracking
+      await this.recurrenceService.registerOccurrence(id);
+    }
+
+    await this.prisma.incidentGroup.update({ where: { id }, data });
+
+    return { success: true, status: body.status };
+  }
+
+  async exportIncident(id: string) {
+    const ig = await this.prisma.incidentGroup.findUnique({
+      where: { id },
+      include: {
+        feedbacks: {
+          include: { rawFeedback: true },
+        },
+        occurrences: {
+          orderBy: { occurredAt: 'asc' },
+        },
+      },
+    });
+    if (!ig) throw new NotFoundException(`Incident ${id} not found`);
+
+    return {
+      id: ig.id,
+      title: ig.title,
+      systemCode: ig.systemCode,
+      feedbackType: ig.feedbackType,
+      priorityScore: ig.priorityScore,
+      priorityLevel: ig.priorityLevel,
+      status: ig.status,
+      feedbackCount: ig.feedbackCount,
+      recurrenceCount: ig.recurrenceCount,
+      firstSeenAt: ig.firstSeenAt.toISOString(),
+      lastSeenAt: ig.lastSeenAt.toISOString(),
+      resolvedAt: ig.resolvedAt?.toISOString() ?? null,
+      rootCauseSummary: ig.rootCauseSummary,
+      epicJiraKey: ig.epicJiraKey,
+      feedbacks: ig.feedbacks.map((pf) => ({
+        id: pf.id,
+        systemCode: pf.systemCode,
+        feedbackType: pf.feedbackType,
+        severityScore: pf.severityScore,
+        aiSummary: pf.aiSummary,
+        keywordsFound: pf.keywordsFound,
+        priorityScore: pf.priorityScore,
+        priorityLevel: pf.priorityLevel,
+        overrideApplied: pf.overrideApplied,
+        manualPriorityLevel: pf.manualPriorityLevel,
+        manualAdjustReason: pf.manualAdjustReason,
+        rawFeedback: {
+          channel: pf.rawFeedback.channel,
+          sourceGroupName: pf.rawFeedback.sourceGroupName,
+          authorName: pf.rawFeedback.authorName,
+          rawContent: pf.rawFeedback.rawContent,
+          receivedAt: pf.rawFeedback.receivedAt.toISOString(),
+        },
+      })),
+      occurrences: ig.occurrences.map((o) => ({
+        id: o.id,
+        occurredAt: o.occurredAt.toISOString(),
+        resolvedAt: o.resolvedAt?.toISOString() ?? null,
+        scoreSnapshot: o.scoreSnapshot,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
   }
 
   private mapIncidentGroup(ig: any) {
