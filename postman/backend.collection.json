@@ -1,0 +1,432 @@
+{
+  "info": {
+    "name": "Hackthon MGEST 2026 - Backend",
+    "_postman_id": "b2c0b7e2-3b2f-4f74-bf86-7c58a7b0e5e9",
+    "description": "Colecao de endpoints do backend NestJS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "App",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hello",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jira",
+      "item": [
+        {
+          "name": "Get Myself",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/myself",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "myself"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Issue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": {\n    \"project\": { \"key\": \"SUP\" },\n    \"summary\": \"Titulo da issue\",\n    \"description\": \"Descricao da issue\",\n    \"issuetype\": { \"name\": \"Task\" },\n    \"labels\": [\"opcional\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jira/issues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "issues"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Issue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/issues/ISSUE-1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "issues",
+                "ISSUE-1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Issues",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/issues?jql=project%20%3D%20SUP&startAt=0&maxResults=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "issues"
+              ],
+              "query": [
+                {
+                  "key": "jql",
+                  "value": "project = SUP"
+                },
+                {
+                  "key": "startAt",
+                  "value": "0"
+                },
+                {
+                  "key": "maxResults",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Issues Bulk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectKey\": \"SUP\",\n  \"issues\": [\n    {\n      \"summary\": \"Issue 1\",\n      \"description\": \"Descricao 1\"\n    },\n    {\n      \"summary\": \"Issue 2\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jira/issues/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "issues",
+                "bulk"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clear Issues",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectKey\": \"SUP\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jira/issues/clear",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "issues",
+                "clear"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cleanup Mock Issues",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/issues/cleanup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "issues",
+                "cleanup"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"SUP\",\n  \"name\": \"Suporte\",\n  \"projectTypeKey\": \"software\",\n  \"projectTemplateKey\": \"com.atlassian.jira-core-project-templates:jira-core-simplified-project-management\",\n  \"leadAccountId\": \"accountId\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jira/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "projects"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "projects"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Project",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/projects/SUP",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "projects",
+                "SUP"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Suporte Atualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jira/projects/SUP",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "projects",
+                "SUP"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Project",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jira/projects/SUP",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jira",
+                "projects",
+                "SUP"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evolution",
+      "item": [
+        {
+          "name": "Create Evolution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evolution"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Evolution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evolution"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Evolution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evolution/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evolution",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Evolution",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evolution/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evolution",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove Evolution",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evolution/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evolution",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
