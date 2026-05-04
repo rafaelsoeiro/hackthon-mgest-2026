@@ -19,7 +19,6 @@ lerna-debug.log*
 .codex
 agents.md
 jiracloud.3.postman
-postman/
 
 ## IDEs and editors
 .idea/
@@ -29,6 +28,7 @@ postman/
 *.launch
 .settings/
 *.sublime-workspace
+/docs
 
 ## VSCode
 .vscode/*
