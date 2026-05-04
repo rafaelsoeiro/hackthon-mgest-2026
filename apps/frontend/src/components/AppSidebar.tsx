@@ -28,7 +28,9 @@ export function AppSidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-        <img src="/logo.png" alt="Prisma" className="w-8 h-8 object-contain shrink-0" />
+        <div className="w-8 h-8 shrink-0 rounded-md bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center font-bold">
+          P
+        </div>
         {expanded && (
           <div className="overflow-hidden">
             <span className="font-bold text-sidebar-foreground text-lg tracking-tight">Prisma</span>
